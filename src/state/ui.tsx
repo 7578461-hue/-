@@ -9,8 +9,8 @@ import type { Transaction } from '../types';
 import { currentMonth } from '../lib/format';
 
 export type PageKey =
-  | 'dashboard' | 'operations' | 'income' | 'family' | 'housing' | 'staff'
-  | 'transport' | 'debts' | 'savings' | 'budgets' | 'calendar' | 'reports' | 'settings';
+  | 'dashboard' | 'operations' | 'income' | 'plan' | 'family' | 'housing' | 'staff'
+  | 'transport' | 'debts' | 'savings' | 'calendar' | 'reports' | 'settings';
 
 export const PAGES: { key: PageKey; name: string; icon: string }[] = [
   { key: 'dashboard', name: 'Главная', icon: '📊' },
@@ -22,7 +22,7 @@ export const PAGES: { key: PageKey; name: string; icon: string }[] = [
   { key: 'transport', name: 'Транспорт', icon: '🚗' },
   { key: 'debts', name: 'Кредиты и долги', icon: '🏦' },
   { key: 'savings', name: 'Накопления', icon: '🎯' },
-  { key: 'budgets', name: 'Бюджеты', icon: '📋' },
+  { key: 'plan', name: 'Бюджет и план', icon: '📋' },
   { key: 'calendar', name: 'Календарь', icon: '📅' },
   { key: 'reports', name: 'Отчёты', icon: '📈' },
   { key: 'settings', name: 'Настройки', icon: '⚙️' },
@@ -52,8 +52,9 @@ interface UiCtx {
 const Ctx = createContext<UiCtx | null>(null);
 
 const pageFromHash = (): PageKey => {
-  const h = window.location.hash.replace(/^#\/?/, '') as PageKey;
-  return PAGES.some((p) => p.key === h) ? h : 'dashboard';
+  const h = window.location.hash.replace(/^#\/?/, '');
+  if (h === 'budgets') return 'plan'; // старый адрес вкладки «Бюджеты»
+  return PAGES.some((p) => p.key === h) ? (h as PageKey) : 'dashboard';
 };
 
 export function UiProvider({ children }: { children: ReactNode }) {

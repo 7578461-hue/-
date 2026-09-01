@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useAppState } from '../state/store';
 import { useUi } from '../state/ui';
 import {
-  balanceSeries, budgetUsage, dailyExpenses, effectiveBudget, expenseByGroup,
+  balanceSeries, dailyExpenses, expenseByGroup, expensePlanGroups,
   groupName, monthHasData, catById, topExpenses, totals, upcomingPayments, staffMonth, incomePlanRows,
 } from '../state/selectors';
 import { addMonths, fmtDayLong, fmtMoney, fmtPct, fmtSigned, monthName, MONTHS_RU_GEN, monthTitle, pluralRu } from '../lib/format';
@@ -25,8 +25,7 @@ export function Dashboard() {
   const byGroupPrev = useMemo(() => expenseByGroup(state, prev), [state, prev]);
   const staff = useMemo(() => staffMonth(state, month), [state, month]);
   const upcoming = useMemo(() => upcomingPayments(state, month), [state, month]);
-  const budget = useMemo(() => effectiveBudget(state, month), [state, month]);
-  const usage = useMemo(() => budgetUsage(state, month), [state, month]);
+  const expensePlan = useMemo(() => expensePlanGroups(state, month), [state, month]);
   const daily = useMemo(() => dailyExpenses(state, month), [state, month]);
   const balance = useMemo(() => balanceSeries(state, month), [state, month]);
   const top5 = useMemo(() => topExpenses(state, month, 5), [state, month]);
@@ -35,6 +34,16 @@ export function Dashboard() {
   const hasData = monthHasData(state, month);
   const planTotal = plan.rows.reduce((s, r) => s + r.plan, 0);
   const upcomingRemaining = upcoming.reduce((s, p) => s + Math.max(p.amount - p.paidAmount, 0), 0);
+
+  // бюджет месяца = сумма плановых статей расходов
+  const planTotalExpense = expensePlan.totalPlan;
+  // сколько по плану ещё предстоит потратить в незакрытых статьях
+  const planLeftToPay = expensePlan.groups
+    .flatMap((g) => g.cats)
+    .reduce((s, c) => s + Math.max(c.plan - c.fact, 0), 0);
+  const warnOverPlan = expensePlan.groups
+    .flatMap((g) => g.cats)
+    .filter((c) => c.plan > 0 && c.fact / c.plan >= 0.8);
 
   const monthGen = MONTHS_RU_GEN[Number(month.slice(5, 7)) - 1];
 
@@ -70,8 +79,7 @@ export function Dashboard() {
     return top;
   }, [byGroup, byGroupPrev]);
 
-  const budgetRatio = budget?.budget.total ? cur.expense / budget.budget.total : 0;
-  const warnLimits = usage.filter((u) => u.level !== 'ok');
+  const budgetRatio = planTotalExpense > 0 ? cur.expense / planTotalExpense : 0;
 
   if (!hasData) {
     return (
@@ -106,7 +114,7 @@ export function Dashboard() {
         />
         <StatCard
           icon="💸" label="Расходы" value={fmtMoney(cur.expense, currency)}
-          sub={<><Delta current={cur.expense} prev={prv.expense} invert /> к прошлому месяцу{budget?.budget.total ? <> · {fmtPct(budgetRatio)} лимита</> : null}</>}
+          sub={<><Delta current={cur.expense} prev={prv.expense} invert /> к прошлому месяцу{planTotalExpense > 0 ? <> · {fmtPct(budgetRatio)} плана</> : null}</>}
           onClick={() => navigate('operations')}
         />
         <StatCard
@@ -147,34 +155,37 @@ export function Dashboard() {
         />
       </div>
 
-      {budget?.budget.total ? (
+      {planTotalExpense > 0 ? (
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <h3 style={{ fontSize: 15 }}>Бюджет — {monthTitle(month).toLowerCase()}</h3>
             <span className={'pill ' + (budgetRatio > 1 ? 'r' : budgetRatio >= 0.8 ? 'y' : 'n')}>
               {fmtPct(budgetRatio)} израсходовано
             </span>
-            {warnLimits.length > 0 && (
-              <button className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }} onClick={() => navigate('budgets')}>
-                ⚠️ {warnLimits.length} {pluralRu(warnLimits.length, 'лимит требует', 'лимита требуют', 'лимитов требуют')} внимания
-              </button>
-            )}
+            <button className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }} onClick={() => navigate('plan')}>
+              {warnOverPlan.length > 0
+                ? `⚠️ ${warnOverPlan.length} ${pluralRu(warnOverPlan.length, 'статья требует', 'статьи требуют', 'статей требуют')} внимания`
+                : 'План месяца →'}
+            </button>
           </div>
           <div style={{ marginTop: 12 }}>
             <Meter ratio={budgetRatio} />
           </div>
           <div className="budget-nums">
             <div>Потрачено<b className="money">{fmtMoney(cur.expense, currency)}</b></div>
-            <div>Лимит<b className="money">{fmtMoney(budget.budget.total, currency)}</b></div>
-            <div>Осталось<b className={'money ' + (budget.budget.total - cur.expense >= 0 ? 'pos' : 'neg')}>
-              {fmtSigned(budget.budget.total - cur.expense, currency)}
+            <div>План на месяц<b className="money">{fmtMoney(planTotalExpense, currency)}</b></div>
+            <div>Осталось<b className={'money ' + (planTotalExpense - cur.expense >= 0 ? 'pos' : 'neg')}>
+              {fmtSigned(planTotalExpense - cur.expense, currency)}
             </b></div>
+            {planLeftToPay > 0 && (
+              <div>Ещё предстоит по плану<b className="money warn-text">{fmtMoney(planLeftToPay, currency)}</b></div>
+            )}
           </div>
         </div>
       ) : (
         <div className="banner info">
-          Задайте общий лимит месяца, чтобы видеть, укладываетесь ли вы в бюджет.
-          <button className="btn btn-accent btn-sm" onClick={() => navigate('budgets')}>Задать бюджет</button>
+          Составьте план месяца — куда и сколько планируете заплатить. Он же станет вашим бюджетом: приложение покажет, укладываетесь ли вы.
+          <button className="btn btn-accent btn-sm" onClick={() => navigate('plan')}>Составить план</button>
         </div>
       )}
 

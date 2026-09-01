@@ -147,6 +147,8 @@ export interface AppState {
   budgets: Record<string, MonthBudget>;
   /** план доходов: месяц -> id категории -> сумма; наследуется как бюджеты */
   incomePlans: Record<string, Record<string, number>>;
+  /** план расходов: месяц -> id категории -> сумма; наследуется как бюджеты */
+  expensePlans: Record<string, Record<string, number>>;
 }
 
 export type PaymentStatus = 'paid' | 'soon' | 'overdue' | 'upcoming';

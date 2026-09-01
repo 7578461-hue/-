@@ -389,6 +389,64 @@ export function incomePlanRows(state: AppState, month: string): { rows: IncomePl
   return { rows, sourceMonth: inh?.sourceMonth ?? null };
 }
 
+// ---------- план расходов ----------
+
+export interface PlanCatRow {
+  category: Category;
+  plan: number;
+  fact: number;
+}
+
+export interface PlanGroupRow {
+  group: GroupKey;
+  plan: number;
+  fact: number;
+  cats: PlanCatRow[];
+}
+
+export function effectiveExpensePlan(state: AppState, month: string): { plans: Record<string, number>; sourceMonth: string | null } {
+  const inh = inheritMonthly(state.expensePlans, month);
+  return { plans: inh?.value ?? {}, sourceMonth: inh?.sourceMonth ?? null };
+}
+
+export function effectiveIncomePlan(state: AppState, month: string): { plans: Record<string, number>; sourceMonth: string | null } {
+  const inh = inheritMonthly(state.incomePlans, month);
+  return { plans: inh?.value ?? {}, sourceMonth: inh?.sourceMonth ?? null };
+}
+
+/** роспись плана расходов по направлениям и категориям + факт месяца */
+export function expensePlanGroups(state: AppState, month: string): {
+  groups: PlanGroupRow[];
+  totalPlan: number;
+  totalFact: number;
+  sourceMonth: string | null;
+} {
+  const { plans, sourceMonth } = effectiveExpensePlan(state, month);
+  const byCat = expenseByCategory(state, month);
+  const groups: PlanGroupRow[] = [];
+  for (const g of Object.keys(GROUP_NAMES) as GroupKey[]) {
+    if (g === 'income') continue;
+    const cats = state.categories
+      .filter((c) => c.group === g && c.type === 'expense')
+      .map((c) => ({ category: c, plan: plans[c.id] ?? 0, fact: byCat[c.id] ?? 0 }));
+    groups.push({
+      group: g,
+      plan: cats.reduce((s, r) => s + r.plan, 0),
+      fact: cats.reduce((s, r) => s + r.fact, 0),
+      cats,
+    });
+  }
+  const totalPlan = groups.reduce((s, g) => s + g.plan, 0);
+  const totalFact = groups.reduce((s, g) => s + g.fact, 0);
+  return { groups, totalPlan, totalFact, sourceMonth };
+}
+
+/** сумма плана расходов месяца (с наследованием) */
+export function expensePlanTotal(state: AppState, month: string): number {
+  const { plans } = effectiveExpensePlan(state, month);
+  return Object.values(plans).reduce((s, v) => s + v, 0);
+}
+
 /** есть ли в месяце хоть одна операция */
 export function monthHasData(state: AppState, month: string): boolean {
   return state.transactions.some((t) => monthKeyOf(t.date) === month);

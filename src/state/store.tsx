@@ -54,6 +54,7 @@ export function emptyState(): AppState {
     goals: [],
     budgets: {},
     incomePlans: {},
+    expensePlans: {},
   };
 }
 
@@ -87,6 +88,7 @@ export type Action =
   | { type: 'category/add'; category: Category }
   | { type: 'budget/set'; month: string; budget: MonthBudget }
   | { type: 'incomePlan/set'; month: string; plans: Record<string, number> }
+  | { type: 'expensePlan/set'; month: string; plans: Record<string, number> }
   | { type: 'settings/currency'; currency: string }
   | { type: 'demo/load' }
   | { type: 'demo/clear' }
@@ -99,9 +101,11 @@ const upsert = <T extends { id: string }>(list: T[], item: T): T[] =>
 function clearDemo(state: AppState): AppState {
   const budgets = { ...state.budgets };
   const incomePlans = { ...state.incomePlans };
+  const expensePlans = { ...state.expensePlans };
   for (const m of state.settings.demoMonths ?? []) {
     delete budgets[m];
     delete incomePlans[m];
+    delete expensePlans[m];
   }
   return {
     ...state,
@@ -115,6 +119,7 @@ function clearDemo(state: AppState): AppState {
     goals: state.goals.filter((x) => !x.demo),
     budgets,
     incomePlans,
+    expensePlans,
   };
 }
 
@@ -132,6 +137,7 @@ function loadDemo(state: AppState): AppState {
     goals: [...s.goals, ...d.goals],
     budgets: { ...d.budgets, ...s.budgets },
     incomePlans: { ...d.incomePlans, ...s.incomePlans },
+    expensePlans: { ...d.expensePlans, ...s.expensePlans },
   };
 }
 
@@ -182,6 +188,8 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, budgets: { ...state.budgets, [action.month]: action.budget } };
     case 'incomePlan/set':
       return { ...state, incomePlans: { ...state.incomePlans, [action.month]: action.plans } };
+    case 'expensePlan/set':
+      return { ...state, expensePlans: { ...state.expensePlans, [action.month]: action.plans } };
     case 'settings/currency':
       return { ...state, settings: { ...state.settings, currency: action.currency } };
     case 'demo/load':

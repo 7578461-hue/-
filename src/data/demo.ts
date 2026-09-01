@@ -36,6 +36,7 @@ export interface DemoData {
   transactions: Transaction[];
   budgets: AppState['budgets'];
   incomePlans: AppState['incomePlans'];
+  expensePlans: AppState['expensePlans'];
   demoMonths: string[];
 }
 
@@ -200,5 +201,21 @@ export function buildDemo(baseMonth: string): DemoData {
   const plan = { 'inc-my-salary': 280000, 'inc-spouse': 90000, 'inc-business': 80000, 'inc-extra': 10000 };
   const incomePlans: AppState['incomePlans'] = { [M]: { ...plan }, [P]: { ...plan } };
 
-  return { members, employees, recurring, debts, goals, transactions, budgets, incomePlans, demoMonths: [M, P] };
+  // роспись плановых расходов месяца
+  const expensePlan: Record<string, number> = {
+    'hou-rent': 65000, 'hou-utilities': 13000, 'hou-internet': 900,
+    'fam-groceries': 55000, 'fam-kids': 6000, 'fam-school': 15000,
+    'fam-clothes': 8000, 'fam-restaurants': 12000, 'fam-pharmacy': 4000,
+    'stf-salary': 99000,
+    'trn-fuel': 12000, 'trn-taxi': 3000, 'trn-insurance': 8400,
+    'crd-payment': 15200, 'crd-debt': 10000,
+    'sav-goal': 30000,
+    'sub-digital': 1000,
+    'ent-fun': 8000,
+    'per-beauty': 5000, 'per-sport': 3000,
+    'oth-gifts': 5000,
+  };
+  const expensePlans: AppState['expensePlans'] = { [M]: { ...expensePlan }, [P]: { ...expensePlan } };
+
+  return { members, employees, recurring, debts, goals, transactions, budgets, incomePlans, expensePlans, demoMonths: [M, P] };
 }

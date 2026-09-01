@@ -138,9 +138,24 @@ function DebtModal({ debt, paidSoFar, onClose, onSave, onDelete }: {
   const [monthly, setMonthly] = useState(debt ? String(debt.monthlyPayment) : '');
   const [payDay, setPayDay] = useState(debt ? String(debt.payDay) : '15');
   const [rate, setRate] = useState(debt ? String(debt.rate) : '0');
+  const [term, setTerm] = useState('');
   const [error, setError] = useState('');
 
   const num = (v: string) => Number(v.replace(',', '.').replace(/\s/g, ''));
+
+  // аннуитетный платёж: остаток, ставка и срок дают сумму ежемесячного платежа
+  const months = Math.round(num(term));
+  const balanceNow = num(remaining);
+  const ratePct = num(rate || '0');
+  const canCompute = Number.isFinite(balanceNow) && balanceNow > 0 && Number.isFinite(months) && months > 0;
+  const computed = (() => {
+    if (!canCompute) return 0;
+    const i = (Number.isFinite(ratePct) ? ratePct : 0) / 100 / 12;
+    const value = i === 0
+      ? balanceNow / months
+      : (balanceNow * i) / (1 - Math.pow(1 + i, -months));
+    return Math.round(value);
+  })();
 
   const save = () => {
     const t = num(total); const r = num(remaining); const m = num(monthly);
@@ -184,17 +199,30 @@ function DebtModal({ debt, paidSoFar, onClose, onSave, onDelete }: {
         <Field label="Остаток долга сейчас">
           <input className="input money" inputMode="decimal" value={remaining} onChange={(e) => setRemaining(e.target.value)} placeholder="0" />
         </Field>
+        <Field label="Ставка, % годовых">
+          <input className="input money" inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="0" />
+        </Field>
+        <Field label="Срок, месяцев">
+          <input className="input money" inputMode="numeric" value={term} onChange={(e) => setTerm(e.target.value)} placeholder="например, 60" />
+        </Field>
         <Field label="Ежемесячный платёж">
           <input className="input money" inputMode="decimal" value={monthly} onChange={(e) => setMonthly(e.target.value)} placeholder="0" />
         </Field>
         <Field label="День платежа (1–28)">
           <input className="input" type="number" min={1} max={28} value={payDay} onChange={(e) => setPayDay(e.target.value)} />
         </Field>
-        <Field label="Ставка, % годовых">
-          <input className="input money" inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="0" />
-        </Field>
       </div>
-      <p className="muted small">Платежи, привязанные к обязательству, автоматически уменьшают остаток долга.</p>
+      {computed > 0 && (
+        <div className="banner info">
+          Расчётный платёж: <b className="money">{computed.toLocaleString('ru-RU')}</b> в месяц
+          <span className="muted small">аннуитет по остатку, ставке и сроку</span>
+          <button className="btn btn-accent btn-sm" onClick={() => setMonthly(String(computed))}>Подставить</button>
+        </div>
+      )}
+      <p className="muted small">
+        Не знаете размер платежа — укажите ставку и срок, приложение посчитает его само.
+        Платежи, привязанные к обязательству, автоматически уменьшают остаток долга.
+      </p>
     </Modal>
   );
 }
