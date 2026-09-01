@@ -1,0 +1,765 @@
+<title>Макап семейного бюджета</title>
+<style>
+  /* ============ ТОКЕНЫ ============ */
+  :root{
+    color-scheme: light;
+    --page:#f6f6f2; --card:#fdfdfb; --card-2:#f1f0ea; --line:#e5e4dc; --line-soft:#eceae2;
+    --ink:#141311; --ink-2:#52514e; --ink-3:#898781;
+    --accent:#2062c8; --accent-ink:#ffffff; --accent-soft:#e3ecfa; --accent-text:#1c56b0;
+    --good:#0ca30c; --good-text:#0f6d18; --good-soft:#e2f3e0;
+    --bad:#d03b3b;  --bad-text:#b02f2f;  --bad-soft:#f9e5e3;
+    --warn:#fab219; --warn-text:#8f5a00; --warn-soft:#faf0d3;
+    --grid:#e1e0d9; --axis:#c3c2b7;
+    /* категории (фиксированные слоты) */
+    --c-family:#2a78d6; --c-housing:#eb6834; --c-staff:#1baf7a; --c-transport:#eda100;
+    --c-credit:#e87ba4; --c-savings:#008300; --c-personal:#4a3aa7; --c-fun:#e34948; --c-other:#8f8d84;
+    --shadow:0 1px 2px rgba(20,19,17,.04), 0 4px 14px rgba(20,19,17,.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --page:#121210; --card:#1c1c1a; --card-2:#232320; --line:#2e2e2b; --line-soft:#262623;
+      --ink:#f2f1ec; --ink-2:#c3c2b7; --ink-3:#8f8d86;
+      --accent:#3f83e8; --accent-ink:#0d1524; --accent-soft:#1d2c45; --accent-text:#7fb0f2;
+      --good:#0ca30c; --good-text:#4fc558; --good-soft:#17301a;
+      --bad:#e66767;  --bad-text:#ef8b8b;  --bad-soft:#3a1d1c;
+      --warn:#fab219; --warn-text:#f4c04d; --warn-soft:#33290f;
+      --grid:#2c2c2a; --axis:#383835;
+      --c-family:#3987e5; --c-housing:#d95926; --c-staff:#199e70; --c-transport:#c98500;
+      --c-credit:#d55181; --c-savings:#1d9a1d; --c-personal:#9085e9; --c-fun:#e66767; --c-other:#84827a;
+      --shadow:0 1px 2px rgba(0,0,0,.35), 0 4px 16px rgba(0,0,0,.28);
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --page:#121210; --card:#1c1c1a; --card-2:#232320; --line:#2e2e2b; --line-soft:#262623;
+    --ink:#f2f1ec; --ink-2:#c3c2b7; --ink-3:#8f8d86;
+    --accent:#3f83e8; --accent-ink:#0d1524; --accent-soft:#1d2c45; --accent-text:#7fb0f2;
+    --good:#0ca30c; --good-text:#4fc558; --good-soft:#17301a;
+    --bad:#e66767;  --bad-text:#ef8b8b;  --bad-soft:#3a1d1c;
+    --warn:#fab219; --warn-text:#f4c04d; --warn-soft:#33290f;
+    --grid:#2c2c2a; --axis:#383835;
+    --c-family:#3987e5; --c-housing:#d95926; --c-staff:#199e70; --c-transport:#c98500;
+    --c-credit:#d55181; --c-savings:#1d9a1d; --c-personal:#9085e9; --c-fun:#e66767; --c-other:#84827a;
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 4px 16px rgba(0,0,0,.28);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    background:var(--page); color:var(--ink);
+    font-family:"Golos Text", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size:14px; line-height:1.45; margin:0; padding:0 0 64px;
+  }
+  h1,h2,h3{margin:0; text-wrap:balance}
+  button{font:inherit; cursor:pointer}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:6px}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important; animation:none !important} }
+
+  .money{font-variant-numeric: tabular-nums}
+  .pos{color:var(--good-text); font-weight:600}
+  .neg{color:var(--bad-text); font-weight:600}
+
+  /* ============ ШАПКА МАКАПА ============ */
+  .note{
+    max-width:1280px; margin:20px auto 0; padding:10px 16px; border-radius:12px;
+    background:var(--warn-soft); color:var(--warn-text); border:1px solid var(--line);
+    display:flex; gap:10px; align-items:center; font-weight:500;
+  }
+  .wrap{max-width:1280px; margin:0 auto; padding:0 20px}
+  .intro{margin:26px auto 14px}
+  .intro h1{font-size:26px; font-weight:700; letter-spacing:-.01em}
+  .intro p{color:var(--ink-2); max-width:64ch; margin:6px 0 0}
+  .switch{display:flex; gap:8px; flex-wrap:wrap; margin:18px 0 14px}
+  .switch button{
+    border:1px solid var(--line); background:var(--card); color:var(--ink-2);
+    border-radius:999px; padding:8px 16px; font-weight:600;
+  }
+  .switch button[aria-selected="true"]{background:var(--ink); color:var(--card); border-color:var(--ink)}
+
+  /* ============ РАМКА ПРИЛОЖЕНИЯ ============ */
+  .frame{
+    border:1px solid var(--line); border-radius:18px; overflow:hidden; background:var(--page);
+    box-shadow:var(--shadow); display:grid; grid-template-columns:236px 1fr; min-height:760px;
+  }
+  aside{
+    background:var(--card-2); border-right:1px solid var(--line); padding:18px 12px; display:flex; flex-direction:column; gap:2px;
+  }
+  .logo{display:flex; align-items:center; gap:10px; padding:6px 10px 16px; font-weight:700; font-size:15px}
+  .logo .coin{width:30px;height:30px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:15px}
+  .nav-item{display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:10px; color:var(--ink-2); font-weight:500}
+  .nav-item .ico{width:20px; text-align:center}
+  .nav-item.active{background:var(--card); color:var(--ink); font-weight:600; box-shadow:var(--shadow)}
+  .nav-sep{height:1px; background:var(--line); margin:8px 10px}
+  .main{padding:0; display:flex; flex-direction:column; min-width:0}
+  .topbar{
+    display:flex; align-items:center; gap:12px; padding:14px 24px; border-bottom:1px solid var(--line); background:var(--card);
+  }
+  .month-btn{
+    display:flex; align-items:center; gap:8px; border:1px solid var(--line); background:var(--page);
+    padding:8px 14px; border-radius:10px; font-weight:600; color:var(--ink);
+  }
+  .top-spacer{flex:1}
+  .btn{border:none; border-radius:10px; padding:9px 16px; font-weight:600}
+  .btn-accent{background:var(--accent); color:var(--accent-ink)}
+  .btn-ghost{background:transparent; border:1px solid var(--line); color:var(--ink-2)}
+  .screen{padding:22px 24px; display:none; flex-direction:column; gap:16px}
+  .screen.on{display:flex}
+  .screen-title{font-size:19px; font-weight:700; letter-spacing:-.01em}
+  .muted{color:var(--ink-3)}
+  .small{font-size:12.5px}
+
+  /* карточки-метрики */
+  .cards{display:grid; grid-template-columns:repeat(4,1fr); gap:12px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px; box-shadow:var(--shadow)}
+  .metric .cap{display:flex; align-items:center; gap:8px; color:var(--ink-2); font-weight:500; font-size:13px}
+  .metric .val{font-size:24px; font-weight:700; letter-spacing:-.01em; margin-top:6px}
+  .metric .sub{margin-top:4px; font-size:12.5px; color:var(--ink-3)}
+  .delta-up{color:var(--good-text); font-weight:600}
+  .delta-down{color:var(--bad-text); font-weight:600}
+  .delta-warn{color:var(--warn-text); font-weight:600}
+
+  /* бюджет-виджет и метры */
+  .meter{height:10px; border-radius:999px; background:var(--accent-soft); overflow:hidden}
+  .meter>i{display:block; height:100%; border-radius:999px; background:var(--accent)}
+  .meter.warn{background:var(--warn-soft)} .meter.warn>i{background:var(--warn)}
+  .meter.over{background:var(--bad-soft)} .meter.over>i{background:var(--bad)}
+  .budget-head{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
+  .budget-nums{display:flex; gap:28px; flex-wrap:wrap; margin-top:12px}
+  .budget-nums div b{display:block; font-size:17px; margin-top:2px}
+
+  /* сетка графиков */
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .chart-card h3{font-size:14px; font-weight:600; margin-bottom:2px}
+  .chart-card .sub{color:var(--ink-3); font-size:12.5px; margin-bottom:10px}
+  .legend{display:flex; gap:14px; flex-wrap:wrap; margin-top:8px; font-size:12.5px; color:var(--ink-2)}
+  .legend .key{display:inline-flex; align-items:center; gap:6px}
+  .key i{width:10px; height:10px; border-radius:3px; display:inline-block}
+  .key.line i{height:3px; border-radius:2px; width:14px}
+  svg text{font-family:inherit; font-size:11px; fill:var(--ink-3)}
+  svg .lbl{font-weight:600; fill:var(--ink-2); font-variant-numeric:tabular-nums}
+  svg .grid-l{stroke:var(--grid); stroke-width:1}
+  svg .axis-l{stroke:var(--axis); stroke-width:1}
+  .donut-wrap{display:flex; gap:20px; align-items:center; flex-wrap:wrap}
+  .donut-center{font-size:19px; font-weight:700; fill:var(--ink)}
+  .donut-legend{display:flex; flex-direction:column; gap:7px; min-width:220px; flex:1}
+  .donut-legend .row{display:flex; align-items:center; gap:8px; font-size:13px}
+  .donut-legend .row b{margin-left:auto; font-weight:600}
+  .donut-legend .row .pct{color:var(--ink-3); width:38px; text-align:right}
+
+  /* топ-5 и предстоящие */
+  .top5 .row{display:grid; grid-template-columns:1fr auto; gap:4px 12px; padding:7px 0; border-bottom:1px solid var(--line-soft)}
+  .top5 .row:last-child{border-bottom:none}
+  .top5 .bar{grid-column:1/-1; height:6px; border-radius:999px; background:var(--card-2); overflow:hidden}
+  .top5 .bar>i{display:block; height:100%; border-radius:999px}
+  .pay-row{display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line-soft)}
+  .pay-row:last-child{border-bottom:none}
+  .dot{width:9px; height:9px; border-radius:50%; flex:none}
+  .dot.g{background:var(--good)} .dot.y{background:var(--warn)} .dot.r{background:var(--bad)} .dot.n{background:var(--axis)}
+  .pill{border-radius:999px; padding:3px 10px; font-size:12px; font-weight:600}
+  .pill.g{background:var(--good-soft); color:var(--good-text)}
+  .pill.y{background:var(--warn-soft); color:var(--warn-text)}
+  .pill.r{background:var(--bad-soft); color:var(--bad-text)}
+  .pill.n{background:var(--card-2); color:var(--ink-2)}
+
+  /* таблица операций */
+  .filters{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+  .chip-select{border:1px solid var(--line); background:var(--card); color:var(--ink-2); border-radius:10px; padding:7px 12px; font-weight:500; display:inline-flex; gap:6px; align-items:center}
+  .search{flex:1; min-width:180px; display:flex; align-items:center; gap:8px; border:1px solid var(--line); background:var(--card); border-radius:10px; padding:7px 12px; color:var(--ink-3)}
+  .table-scroll{overflow-x:auto}
+  table{border-collapse:collapse; width:100%; min-width:760px}
+  th{font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-3); font-weight:600; text-align:left; padding:8px 10px; border-bottom:1px solid var(--line)}
+  td{padding:9px 10px; border-bottom:1px solid var(--line-soft); vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  td.r, th.r{text-align:right}
+  .cat-chip{display:inline-flex; align-items:center; gap:6px; font-weight:500}
+  .cat-chip i{width:8px; height:8px; border-radius:50%; display:inline-block}
+  .mand{font-size:11.5px; color:var(--ink-3); border:1px solid var(--line); border-radius:6px; padding:1px 6px}
+  .row-menu{color:var(--ink-3); background:none; border:none; font-size:16px; padding:2px 6px; border-radius:6px}
+  .table-foot{display:flex; gap:20px; padding-top:10px; color:var(--ink-2); font-size:13px; flex-wrap:wrap}
+
+  /* персонал */
+  .staff-cards{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
+  .avatar{width:34px; height:34px; border-radius:50%; background:var(--accent-soft); color:var(--accent-text); display:grid; place-items:center; font-weight:700; font-size:13px}
+
+  /* бюджеты */
+  .limit-row{display:grid; grid-template-columns:200px 1fr auto; gap:8px 16px; align-items:center; padding:12px 0; border-bottom:1px solid var(--line-soft)}
+  .limit-row:last-child{border-bottom:none}
+  .limit-name{display:flex; align-items:center; gap:8px; font-weight:600}
+  .limit-sub{grid-column:2; color:var(--ink-3); font-size:12.5px}
+
+  /* календарь */
+  .cal{display:grid; grid-template-columns:repeat(7,1fr); gap:6px}
+  .cal .dow{text-align:center; font-size:12px; color:var(--ink-3); font-weight:600; padding:4px 0; text-transform:uppercase; letter-spacing:.04em}
+  .cal .day{background:var(--card); border:1px solid var(--line-soft); border-radius:10px; min-height:74px; padding:6px 8px; font-size:12px}
+  .cal .day .num{font-weight:600; color:var(--ink-2)}
+  .cal .day.off{opacity:.45}
+  .cal .day.today{border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent)}
+  .cal .ev{display:flex; align-items:center; gap:5px; margin-top:4px; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
+  /* дизайн-система */
+  .ds{margin-top:34px}
+  .ds h2{font-size:19px; margin-bottom:4px}
+  .ds .cols{display:grid; grid-template-columns:1.2fr .8fr; gap:14px; margin-top:14px}
+  .swatches{display:flex; gap:8px; flex-wrap:wrap}
+  .sw{width:110px; border:1px solid var(--line); border-radius:10px; overflow:hidden; font-size:11.5px}
+  .sw i{display:block; height:44px}
+  .sw span{display:block; padding:5px 8px; color:var(--ink-2)}
+  .phone{
+    width:300px; border:1px solid var(--line); border-radius:26px; background:var(--page);
+    box-shadow:var(--shadow); overflow:hidden; margin:0 auto;
+  }
+  .phone .p-top{display:flex; align-items:center; gap:10px; padding:12px 14px; background:var(--card); border-bottom:1px solid var(--line)}
+  .phone .p-cards{display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:12px}
+  .phone .card{padding:10px 12px}
+  .phone .metric .val{font-size:17px}
+  .p-fab{position:sticky; bottom:10px; margin:6px 12px 12px auto; width:44px; height:44px; border-radius:50%; background:var(--accent); color:var(--accent-ink); display:grid; place-items:center; font-size:22px; box-shadow:var(--shadow)}
+
+  @media (max-width: 1020px){
+    .frame{grid-template-columns:1fr}
+    aside{flex-direction:row; overflow-x:auto; border-right:none; border-bottom:1px solid var(--line)}
+    .nav-sep{display:none}
+    .cards,.staff-cards{grid-template-columns:1fr 1fr}
+    .grid-2{grid-template-columns:1fr}
+    .ds .cols{grid-template-columns:1fr}
+    .limit-row{grid-template-columns:1fr auto}
+    .limit-row .meter{grid-column:1/-1}
+  }
+  @media (max-width: 560px){ .cards,.staff-cards{grid-template-columns:1fr} }
+</style>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800&display=swap">
+
+<div class="wrap">
+  <div class="note">⚠️ <span>Это дизайн-макап. Все суммы — <b>условные тестовые данные</b> для демонстрации интерфейса. Валюта в приложении настраивается (здесь для примера — ₽).</span></div>
+
+  <header class="intro">
+    <h1>Семейный бюджет — дизайн-макап</h1>
+    <p>Пять ключевых экранов будущего приложения: главная с показателями и графиками, операции, персонал, бюджеты с лимитами и календарь платежей. Переключайте экраны кнопками ниже.</p>
+  </header>
+
+  <div class="switch" role="tablist" aria-label="Экраны макапа">
+    <button role="tab" aria-selected="true" data-t="dash">📊 Главная</button>
+    <button role="tab" aria-selected="false" data-t="ops">💳 Операции</button>
+    <button role="tab" aria-selected="false" data-t="staff">👥 Персонал</button>
+    <button role="tab" aria-selected="false" data-t="budget">📋 Бюджеты</button>
+    <button role="tab" aria-selected="false" data-t="cal">📅 Календарь</button>
+  </div>
+
+  <div class="frame">
+    <aside>
+      <div class="logo"><span class="coin">₿</span> Семейный бюджет</div>
+      <div class="nav-item active"><span class="ico">📊</span> Главная</div>
+      <div class="nav-item"><span class="ico">💳</span> Операции</div>
+      <div class="nav-item"><span class="ico">💰</span> Доходы</div>
+      <div class="nav-item"><span class="ico">👨‍👩‍👧</span> Семья</div>
+      <div class="nav-item"><span class="ico">🏠</span> Жильё</div>
+      <div class="nav-item"><span class="ico">👥</span> Персонал</div>
+      <div class="nav-item"><span class="ico">🚗</span> Транспорт</div>
+      <div class="nav-item"><span class="ico">🏦</span> Кредиты и долги</div>
+      <div class="nav-item"><span class="ico">🎯</span> Накопления</div>
+      <div class="nav-item"><span class="ico">📋</span> Бюджеты</div>
+      <div class="nav-item"><span class="ico">📅</span> Календарь</div>
+      <div class="nav-item"><span class="ico">📈</span> Отчёты</div>
+      <div class="nav-sep"></div>
+      <div class="nav-item"><span class="ico">⚙️</span> Настройки</div>
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <button class="month-btn">Сентябрь 2026 <span class="muted">▾</span></button>
+        <div class="top-spacer"></div>
+        <button class="btn btn-ghost">Экспорт</button>
+        <button class="btn btn-accent">＋ Добавить операцию</button>
+      </div>
+
+      <!-- ================= ГЛАВНАЯ ================= -->
+      <section class="screen on" id="s-dash">
+        <div class="cards">
+          <div class="card metric"><div class="cap">💰 Доходы</div><div class="val money">450 000 ₽</div><div class="sub"><span class="delta-up">▲ +4%</span> к августу · план 460 000</div></div>
+          <div class="card metric"><div class="cap">💸 Расходы</div><div class="val money">336 400 ₽</div><div class="sub"><span class="delta-up">▼ −6%</span> к августу · 80% лимита</div></div>
+          <div class="card metric"><div class="cap">💵 Остаток</div><div class="val money pos">+113 600 ₽</div><div class="sub"><span class="delta-up">▲ +39 600</span> к августу</div></div>
+          <div class="card metric"><div class="cap">📅 Предстоящие платежи</div><div class="val money">55 500 ₽</div><div class="sub">5 платежей до конца месяца</div></div>
+          <div class="card metric"><div class="cap">👨‍👩‍👧 Семья</div><div class="val money">98 200 ₽</div><div class="sub">29% расходов · <span class="delta-up">▼ −8%</span></div></div>
+          <div class="card metric"><div class="cap">🏠 Жильё</div><div class="val money">96 500 ₽</div><div class="sub">29% расходов · <span class="delta-down">▲ +2%</span></div></div>
+          <div class="card metric"><div class="cap">👥 Персонал</div><div class="val money">78 000 ₽</div><div class="sub"><span class="delta-warn">осталось выплатить 21 000</span></div></div>
+          <div class="card metric"><div class="cap">🏦 Накопления</div><div class="val money pos">+30 000 ₽</div><div class="sub">взносы в цели за сентябрь</div></div>
+        </div>
+
+        <div class="card">
+          <div class="budget-head">
+            <h3>Бюджет сентября</h3>
+            <span class="pill n">80% израсходовано</span>
+            <span class="muted small" style="margin-left:auto">лимит меняется на вкладке «Бюджеты»</span>
+          </div>
+          <div class="meter warn" style="margin-top:12px"><i style="width:80%"></i></div>
+          <div class="budget-nums money">
+            <div class="muted small">Потрачено<b class="money" style="color:var(--ink)">336 400 ₽</b></div>
+            <div class="muted small">Лимит<b class="money" style="color:var(--ink)">420 000 ₽</b></div>
+            <div class="muted small">Осталось<b class="money pos">83 600 ₽</b></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card chart-card">
+            <h3>Доходы и расходы</h3>
+            <div class="sub">сентябрь в сравнении с августом, тыс. ₽</div>
+            <svg id="ch-ivr" viewBox="0 0 420 190" width="100%" role="img" aria-label="Доходы и расходы за август и сентябрь"></svg>
+            <div class="legend"><span class="key"><i style="background:var(--good)"></i> Доходы</span><span class="key"><i style="background:var(--bad)"></i> Расходы</span></div>
+          </div>
+          <div class="card chart-card">
+            <h3>Расходы по категориям</h3>
+            <div class="sub">сентябрь, доля от 336 400 ₽</div>
+            <div class="donut-wrap">
+              <svg id="ch-donut" viewBox="0 0 170 170" width="170" height="170" role="img" aria-label="Структура расходов по категориям"></svg>
+              <div class="donut-legend" id="donut-legend"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <h3>Расходы по дням</h3>
+          <div class="sub">сентябрь, тыс. ₽ в день</div>
+          <svg id="ch-days" viewBox="0 0 900 170" width="100%" role="img" aria-label="Расходы по дням сентября"></svg>
+        </div>
+
+        <div class="grid-2">
+          <div class="card chart-card">
+            <h3>Динамика остатка</h3>
+            <div class="sub">накопленный остаток с начала месяца, тыс. ₽</div>
+            <svg id="ch-flow" viewBox="0 0 420 190" width="100%" role="img" aria-label="Динамика остатка денег в сентябре"></svg>
+          </div>
+          <div class="card chart-card">
+            <h3>Сентябрь против августа</h3>
+            <div class="sub">расходы по направлениям, тыс. ₽</div>
+            <svg id="ch-cmp" viewBox="0 0 420 190" width="100%" role="img" aria-label="Сравнение расходов по группам с прошлым месяцем"></svg>
+            <div class="legend"><span class="key"><i style="background:var(--c-family)"></i> Сентябрь</span><span class="key"><i style="background:var(--axis)"></i> Август</span></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card chart-card">
+            <h3>Топ-5 крупных расходов</h3>
+            <div class="sub">сентябрь</div>
+            <div class="top5" id="top5"></div>
+          </div>
+          <div class="card chart-card">
+            <h3>Предстоящие платежи</h3>
+            <div class="sub">ближайшие обязательные</div>
+            <div>
+              <div class="pay-row"><span class="dot y"></span><div><b>Коммунальные услуги</b><div class="muted small">5 сентября · Жильё</div></div><span class="money" style="margin-left:auto;font-weight:600">12 500 ₽</span><span class="pill y">скоро</span></div>
+              <div class="pay-row"><span class="dot y"></span><div><b>Зарплата — Анна, няня</b><div class="muted small">5 сентября · Персонал</div></div><span class="money" style="margin-left:auto;font-weight:600">45 000 ₽</span><span class="pill y">скоро</span></div>
+              <div class="pay-row"><span class="dot n"></span><div><b>Зарплата — Сергей, водитель</b><div class="muted small">10 сентября · Персонал</div></div><span class="money" style="margin-left:auto;font-weight:600">21 000 ₽</span><span class="pill n">ожидается</span></div>
+              <div class="pay-row"><span class="dot n"></span><div><b>Автокредит</b><div class="muted small">15 сентября · Кредиты</div></div><span class="money" style="margin-left:auto;font-weight:600">15 200 ₽</span><span class="pill n">ожидается</span></div>
+              <div class="pay-row"><span class="dot r"></span><div><b>Страховка автомобиля</b><div class="muted small">30 августа · Транспорт</div></div><span class="money" style="margin-left:auto;font-weight:600">8 400 ₽</span><span class="pill r">просрочено</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= ОПЕРАЦИИ ================= -->
+      <section class="screen" id="s-ops">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+          <h2 class="screen-title">Операции</h2>
+          <span class="top-spacer"></span>
+          <button class="btn btn-ghost" style="color:var(--good-text)">＋ Доход</button>
+          <button class="btn btn-accent">＋ Расход</button>
+        </div>
+        <div class="filters">
+          <span class="chip-select">Сентябрь 2026 ▾</span>
+          <span class="chip-select">Все категории ▾</span>
+          <span class="chip-select">Вся семья ▾</span>
+          <span class="chip-select">Тип: все ▾</span>
+          <span class="chip-select">Способ: все ▾</span>
+          <span class="chip-select">Обязательность ▾</span>
+          <span class="search">🔎 Поиск по описанию…</span>
+        </div>
+        <div class="card table-scroll">
+          <table>
+            <thead><tr>
+              <th>Дата</th><th>Категория</th><th>Описание</th><th>Кто</th><th>Способ</th><th></th><th class="r">Сумма</th><th></th>
+            </tr></thead>
+            <tbody>
+              <tr><td class="muted">01.09</td><td><span class="cat-chip"><i style="background:var(--good)"></i>Моя зарплата</span></td><td>Зарплата за август</td><td>Я</td><td class="muted">Перевод</td><td></td><td class="r money pos">+280 000 ₽</td><td><button class="row-menu">⋯</button></td></tr>
+              <tr><td class="muted">01.09</td><td><span class="cat-chip"><i style="background:var(--c-housing)"></i>Аренда</span></td><td>Аренда квартиры, сентябрь</td><td>Я</td><td class="muted">Перевод</td><td><span class="mand">обязат.</span></td><td class="r money neg">−65 000 ₽</td><td><button class="row-menu">⋯</button></td></tr>
+              <tr><td class="muted">01.09</td><td><span class="cat-chip"><i style="background:var(--c-savings)"></i>Накопления</span></td><td>Взнос «Резервный фонд»</td><td>Я</td><td class="muted">Перевод</td><td></td><td class="r money neg">−20 000 ₽</td><td><button class="row-menu">⋯</button></td></tr>
+              <tr><td class="muted">02.09</td><td><span class="cat-chip"><i style="background:var(--c-family)"></i>Продукты</span></td><td>Закупка на неделю</td><td>Мария</td><td class="muted">Карта</td><td></td><td class="r money neg">−8 400 ₽</td><td><button class="row-menu">⋯</button></td></tr>
+              <tr><td class="muted">03.09</td><td><span class="cat-chip"><i style="background:var(--c-personal)"></i>Подписки</span></td><td>Онлайн-кинотеатр</td><td>Я</td><td class="muted">Карта</td><td><span class="mand">обязат.</span></td><td class="r money neg">−599 ₽</td><td><button class="row-menu">⋯</button></td></tr>
+              <tr><td class="muted">04.09</td><td><span class="cat-chip"><i style="background:var(--c-transport)"></i>Такси</span></td><td>Поездки по городу</td><td>Супруга</td><td class="muted">Карта</td><td></td><td class="r money neg">−1 250 ₽</td><td><button class="row-menu">⋯</button></td></tr>
+              <tr><td class="muted">05.09</td><td><span class="cat-chip"><i style="background:var(--c-staff)"></i>Зарплата персонала</span></td><td>Анна, няня — сентябрь</td><td>Я</td><td class="muted">Наличные</td><td><span class="mand">обязат.</span></td><td class="r money neg">−45 000 ₽</td><td><button class="row-menu">⋯</button></td></tr>
+              <tr><td class="muted">05.09</td><td><span class="cat-chip"><i style="background:var(--c-housing)"></i>Коммунальные</span></td><td>ЖКУ за август</td><td>Я</td><td class="muted">Перевод</td><td><span class="mand">обязат.</span></td><td class="r money neg">−12 500 ₽</td><td><button class="row-menu">⋯</button></td></tr>
+              <tr><td class="muted">06.09</td><td><span class="cat-chip"><i style="background:var(--c-family)"></i>Дети</span></td><td>Кружок рисования</td><td>Супруга</td><td class="muted">Карта</td><td></td><td class="r money neg">−3 500 ₽</td><td><button class="row-menu">⋯</button></td></tr>
+            </tbody>
+          </table>
+          <div class="table-foot money"><span>42 операции</span><span>Доходы: <b class="pos">+450 000 ₽</b></span><span>Расходы: <b class="neg">−336 400 ₽</b></span><span>Итог: <b>+113 600 ₽</b></span></div>
+        </div>
+        <p class="muted small">Каждую операцию можно редактировать, дублировать и удалять через меню «⋯». Строки — тестовые данные.</p>
+      </section>
+
+      <!-- ================= ПЕРСОНАЛ ================= -->
+      <section class="screen" id="s-staff">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+          <h2 class="screen-title">Персонал</h2>
+          <span class="top-spacer"></span>
+          <button class="btn btn-ghost">＋ Сотрудник</button>
+          <button class="btn btn-accent">Выплатить</button>
+        </div>
+        <div class="staff-cards">
+          <div class="card metric"><div class="cap">Персонал за сентябрь</div><div class="val money">78 000 ₽</div><div class="sub">план на месяц — 99 000 ₽</div></div>
+          <div class="card metric"><div class="cap">Оплачено</div><div class="val money pos">78 000 ₽</div><div class="sub">2 сотрудника полностью</div></div>
+          <div class="card metric"><div class="cap">Осталось выплатить</div><div class="val money" style="color:var(--warn-text)">21 000 ₽</div><div class="sub">Сергей — до 10 сентября</div></div>
+        </div>
+        <div class="card table-scroll">
+          <table>
+            <thead><tr><th>Сотрудник</th><th>Должность</th><th class="r">Оклад</th><th>День выплаты</th><th class="r">Аванс</th><th class="r">Бонусы</th><th class="r">Итого за месяц</th><th>Статус</th></tr></thead>
+            <tbody>
+              <tr><td><span style="display:flex;align-items:center;gap:10px"><span class="avatar">АН</span><b>Анна</b></span></td><td>Няня</td><td class="r money">45 000 ₽</td><td class="muted">5 число</td><td class="r money">—</td><td class="r money">—</td><td class="r money">45 000 ₽</td><td><span class="pill g">оплачено</span></td></tr>
+              <tr><td><span style="display:flex;align-items:center;gap:10px"><span class="avatar">МА</span><b>Мария</b></span></td><td>Домработница</td><td class="r money">24 000 ₽</td><td class="muted">1 число</td><td class="r money">10 000 ₽</td><td class="r money">—</td><td class="r money">24 000 ₽</td><td><span class="pill g">оплачено</span></td></tr>
+              <tr><td><span style="display:flex;align-items:center;gap:10px"><span class="avatar">СЕ</span><b>Сергей</b></span></td><td>Водитель</td><td class="r money">30 000 ₽</td><td class="muted">10 число</td><td class="r money">9 000 ₽</td><td class="r money">—</td><td class="r money">9 000 ₽</td><td><span class="pill y">частично · 21 000 ₽</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card chart-card">
+          <h3>Выплаты сентября</h3>
+          <div class="sub">зарплата, авансы, премии, налоги и взносы</div>
+          <div class="pay-row"><span class="dot g"></span><div><b>Мария — аванс</b><div class="muted small">1 сентября · наличные</div></div><span class="money" style="margin-left:auto;font-weight:600">10 000 ₽</span><span class="pill g">оплачено</span></div>
+          <div class="pay-row"><span class="dot g"></span><div><b>Мария — остаток оклада</b><div class="muted small">1 сентября · наличные</div></div><span class="money" style="margin-left:auto;font-weight:600">14 000 ₽</span><span class="pill g">оплачено</span></div>
+          <div class="pay-row"><span class="dot g"></span><div><b>Анна — зарплата</b><div class="muted small">5 сентября · наличные</div></div><span class="money" style="margin-left:auto;font-weight:600">45 000 ₽</span><span class="pill g">оплачено</span></div>
+          <div class="pay-row"><span class="dot g"></span><div><b>Сергей — аванс</b><div class="muted small">1 сентября · перевод</div></div><span class="money" style="margin-left:auto;font-weight:600">9 000 ₽</span><span class="pill g">оплачено</span></div>
+          <div class="pay-row"><span class="dot y"></span><div><b>Сергей — остаток оклада</b><div class="muted small">10 сентября · перевод</div></div><span class="money" style="margin-left:auto;font-weight:600">21 000 ₽</span><span class="pill y">скоро</span></div>
+        </div>
+      </section>
+
+      <!-- ================= БЮДЖЕТЫ ================= -->
+      <section class="screen" id="s-budget">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+          <h2 class="screen-title">Бюджеты и лимиты</h2>
+          <span class="top-spacer"></span>
+          <button class="btn btn-accent">＋ Лимит</button>
+        </div>
+        <div class="card">
+          <div class="budget-head"><h3>Общий бюджет сентября</h3><span class="pill n">80%</span></div>
+          <div class="meter warn" style="margin-top:12px"><i style="width:80%"></i></div>
+          <div class="budget-nums money">
+            <div class="muted small">Лимит<b>420 000 ₽</b></div>
+            <div class="muted small">Потрачено<b>336 400 ₽</b></div>
+            <div class="muted small">Осталось<b class="pos">83 600 ₽</b></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="limit-row">
+            <span class="limit-name"><i class="dot" style="background:var(--c-family)"></i>Продукты</span>
+            <div class="meter warn"><i style="width:80%"></i></div>
+            <span class="money"><b>48 200</b> <span class="muted">/ 60 000 ₽</span> <span class="pill y">80%</span></span>
+          </div>
+          <div class="limit-row">
+            <span class="limit-name"><i class="dot" style="background:var(--c-housing)"></i>Жильё</span>
+            <div class="meter warn"><i style="width:97%"></i></div>
+            <span class="money"><b>96 500</b> <span class="muted">/ 100 000 ₽</span> <span class="pill y">97%</span></span>
+          </div>
+          <div class="limit-row">
+            <span class="limit-name"><i class="dot" style="background:var(--c-staff)"></i>Персонал</span>
+            <div class="meter"><i style="width:78%"></i></div>
+            <span class="money"><b>78 000</b> <span class="muted">/ 100 000 ₽</span> <span class="pill n">78%</span></span>
+          </div>
+          <div class="limit-row">
+            <span class="limit-name"><i class="dot" style="background:var(--c-transport)"></i>Транспорт</span>
+            <div class="meter warn"><i style="width:86%"></i></div>
+            <span class="money"><b>21 400</b> <span class="muted">/ 25 000 ₽</span> <span class="pill y">86%</span></span>
+          </div>
+          <div class="limit-row">
+            <span class="limit-name"><i class="dot" style="background:var(--c-fun)"></i>Развлечения</span>
+            <div class="meter over"><i style="width:100%"></i></div>
+            <span class="money"><b style="color:var(--bad-text)">9 300</b> <span class="muted">/ 8 000 ₽</span> <span class="pill r">превышен на 1 300 ₽</span></span>
+          </div>
+          <div class="limit-row">
+            <span class="limit-name"><i class="dot" style="background:var(--c-personal)"></i>Личные расходы</span>
+            <div class="meter"><i style="width:15%"></i></div>
+            <span class="money"><b>3 000</b> <span class="muted">/ 20 000 ₽</span> <span class="pill n">15%</span></span>
+          </div>
+        </div>
+        <p class="muted small">Жёлтая зона начинается с 80% лимита, красная — при превышении. Пороги можно менять в настройках.</p>
+      </section>
+
+      <!-- ================= КАЛЕНДАРЬ ================= -->
+      <section class="screen" id="s-cal">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+          <h2 class="screen-title">Календарь платежей</h2>
+          <span class="top-spacer"></span>
+          <span class="legend"><span class="key"><i style="background:var(--good);border-radius:50%"></i> оплачено</span><span class="key"><i style="background:var(--warn);border-radius:50%"></i> скоро</span><span class="key"><i style="background:var(--bad);border-radius:50%"></i> просрочено</span><span class="key"><i style="background:var(--axis);border-radius:50%"></i> ожидается</span></span>
+        </div>
+        <div class="card">
+          <div class="cal" id="cal-grid"></div>
+        </div>
+        <div class="card chart-card">
+          <h3>Все платежи сентября</h3>
+          <div class="sub">регулярные и разовые обязательные</div>
+          <div class="pay-row"><span class="dot r"></span><div><b>Страховка автомобиля</b><div class="muted small">30 августа · Транспорт</div></div><span class="money" style="margin-left:auto;font-weight:600">8 400 ₽</span><button class="btn btn-ghost small">Оплатить</button></div>
+          <div class="pay-row"><span class="dot g"></span><div><b>Аренда квартиры</b><div class="muted small">1 сентября · Жильё</div></div><span class="money" style="margin-left:auto;font-weight:600">65 000 ₽</span><span class="pill g">оплачено</span></div>
+          <div class="pay-row"><span class="dot y"></span><div><b>Коммунальные услуги</b><div class="muted small">5 сентября · Жильё</div></div><span class="money" style="margin-left:auto;font-weight:600">12 500 ₽</span><button class="btn btn-ghost small">Оплатить</button></div>
+          <div class="pay-row"><span class="dot y"></span><div><b>Зарплата — Анна, няня</b><div class="muted small">5 сентября · Персонал</div></div><span class="money" style="margin-left:auto;font-weight:600">45 000 ₽</span><button class="btn btn-ghost small">Оплатить</button></div>
+          <div class="pay-row"><span class="dot n"></span><div><b>Зарплата — Сергей, водитель</b><div class="muted small">10 сентября · Персонал</div></div><span class="money" style="margin-left:auto;font-weight:600">21 000 ₽</span><button class="btn btn-ghost small">Оплатить</button></div>
+          <div class="pay-row"><span class="dot n"></span><div><b>Автокредит</b><div class="muted small">15 сентября · Кредиты</div></div><span class="money" style="margin-left:auto;font-weight:600">15 200 ₽</span><button class="btn btn-ghost small">Оплатить</button></div>
+          <div class="pay-row"><span class="dot n"></span><div><b>Интернет</b><div class="muted small">20 сентября · Жильё</div></div><span class="money" style="margin-left:auto;font-weight:600">900 ₽</span><button class="btn btn-ghost small">Оплатить</button></div>
+          <div class="pay-row"><span class="dot n"></span><div><b>Подписка на музыку</b><div class="muted small">25 сентября · Подписки</div></div><span class="money" style="margin-left:auto;font-weight:600">299 ₽</span><button class="btn btn-ghost small">Оплатить</button></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ================= ДИЗАЙН-СИСТЕМА ================= -->
+  <section class="ds">
+    <h2>Дизайн-система</h2>
+    <p class="muted">Так приложение будет выглядеть в коде: токены цвета, шрифт Golos Text, светлая и тёмная темы (тёмная включается автоматически по теме системы).</p>
+    <div class="cols">
+      <div class="card">
+        <h3 style="font-size:14px">Цветовая логика</h3>
+        <p class="muted small" style="margin:4px 0 10px">зелёный — доход и «всё хорошо» · красный — расход и превышение · жёлтый — предупреждение · синий — нейтральные действия</p>
+        <div class="swatches">
+          <div class="sw"><i style="background:var(--good)"></i><span>доход / ок</span></div>
+          <div class="sw"><i style="background:var(--bad)"></i><span>расход / превышен</span></div>
+          <div class="sw"><i style="background:var(--warn)"></i><span>предупреждение</span></div>
+          <div class="sw"><i style="background:var(--accent)"></i><span>действия / акцент</span></div>
+        </div>
+        <h3 style="font-size:14px; margin-top:16px">Цвета категорий (постоянные)</h3>
+        <div class="swatches" style="margin-top:10px">
+          <div class="sw"><i style="background:var(--c-family)"></i><span>Семья</span></div>
+          <div class="sw"><i style="background:var(--c-housing)"></i><span>Жильё</span></div>
+          <div class="sw"><i style="background:var(--c-staff)"></i><span>Персонал</span></div>
+          <div class="sw"><i style="background:var(--c-transport)"></i><span>Транспорт</span></div>
+          <div class="sw"><i style="background:var(--c-credit)"></i><span>Кредиты</span></div>
+          <div class="sw"><i style="background:var(--c-savings)"></i><span>Накопления</span></div>
+          <div class="sw"><i style="background:var(--c-personal)"></i><span>Личное</span></div>
+          <div class="sw"><i style="background:var(--c-fun)"></i><span>Развлечения</span></div>
+        </div>
+        <h3 style="font-size:14px; margin-top:16px">Типографика</h3>
+        <p style="font-size:24px; font-weight:700; margin:8px 0 0">Golos Text · 450 000 ₽</p>
+        <p class="muted small">крупные суммы 700, подписи 500, табличные цифры выравниваются моноширинно</p>
+      </div>
+      <div>
+        <p class="muted small" style="text-align:center; margin:0 0 8px">Мобильная версия</p>
+        <div class="phone">
+          <div class="p-top"><span style="font-size:18px">☰</span><b>Сентябрь 2026</b><span class="top-spacer"></span><span class="muted">▾</span></div>
+          <div class="p-cards">
+            <div class="card metric"><div class="cap small">💰 Доходы</div><div class="val money">450 000</div><div class="sub"><span class="delta-up">▲ +4%</span></div></div>
+            <div class="card metric"><div class="cap small">💸 Расходы</div><div class="val money">336 400</div><div class="sub"><span class="delta-up">▼ −6%</span></div></div>
+            <div class="card metric"><div class="cap small">💵 Остаток</div><div class="val money pos">+113 600</div><div class="sub">к августу ▲</div></div>
+            <div class="card metric"><div class="cap small">📅 Платежи</div><div class="val money">55 500</div><div class="sub">5 впереди</div></div>
+          </div>
+          <div style="padding:0 12px">
+            <div class="card">
+              <div class="small" style="font-weight:600">Бюджет сентября · 80%</div>
+              <div class="meter warn" style="margin-top:8px"><i style="width:80%"></i></div>
+              <div class="muted small" style="margin-top:6px">осталось 83 600 ₽ из 420 000 ₽</div>
+            </div>
+          </div>
+          <div class="p-fab">＋</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  // ---- переключение экранов макапа ----
+  const tabs = document.querySelectorAll('.switch [role="tab"]');
+  tabs.forEach(b => b.addEventListener('click', () => {
+    tabs.forEach(x => x.setAttribute('aria-selected', String(x === b)));
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+    document.getElementById('s-' + b.dataset.t).classList.add('on');
+  }));
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, at, parent) => { const e = document.createElementNS(NS, n); for (const k in at) e.setAttribute(k, at[k]); if (parent) parent.appendChild(e); return e; };
+  const fmt = n => n.toLocaleString('ru-RU');
+  // столбик: скруглён сверху (4px), прямой у базовой линии
+  function colPath(x, yTop, w, h, r = 4) {
+    r = Math.min(r, h, w / 2);
+    return `M ${x} ${yTop + h} L ${x} ${yTop + r} Q ${x} ${yTop} ${x + r} ${yTop} L ${x + w - r} ${yTop} Q ${x + w} ${yTop} ${x + w} ${yTop + r} L ${x + w} ${yTop + h} Z`;
+  }
+  function barPath(x, y, w, h, r = 4) { // горизонтальный: скруглён справа
+    r = Math.min(r, w, h / 2);
+    return `M ${x} ${y} L ${x + w - r} ${y} Q ${x + w} ${y} ${x + w} ${y + r} L ${x + w} ${y + h - r} Q ${x + w} ${y + h} ${x + w - r} ${y + h} L ${x} ${y + h} Z`;
+  }
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim() || v;
+
+  // ---- Доходы vs расходы (август / сентябрь) ----
+  (function () {
+    const svg = document.getElementById('ch-ivr');
+    const data = [{ m: 'Август', inc: 432, exp: 358 }, { m: 'Сентябрь', inc: 450, exp: 336.4 }];
+    const base = 158, top = 26, max = 480, W = 24, gap = 10;
+    [0, 120, 240, 360, 480].forEach(v => {
+      const y = base - v / max * (base - top);
+      el('line', { x1: 46, x2: 404, y1: y, y2: y, class: v === 0 ? 'axis-l' : 'grid-l' }, svg);
+      if (v > 0) { const t = el('text', { x: 40, y: y + 3, 'text-anchor': 'end' }, svg); t.textContent = fmt(v); }
+    });
+    data.forEach((d, i) => {
+      const cx = 120 + i * 180;
+      const hI = d.inc / max * (base - top), hE = d.exp / max * (base - top);
+      el('path', { d: colPath(cx - W - gap / 2, base - hI, W, hI), style: 'fill:var(--good)' }, svg);
+      el('path', { d: colPath(cx + gap / 2, base - hE, W, hE), style: 'fill:var(--bad)' }, svg);
+      const t = el('text', { x: cx, y: base + 16, 'text-anchor': 'middle' }, svg); t.textContent = d.m;
+      if (i === 1) {
+        const a = el('text', { x: cx - W / 2 - gap / 2, y: base - hI - 6, 'text-anchor': 'middle', class: 'lbl' }, svg); a.textContent = fmt(d.inc);
+        const b = el('text', { x: cx + W / 2 + gap / 2, y: base - hE - 6, 'text-anchor': 'middle', class: 'lbl' }, svg); b.textContent = fmt(d.exp);
+      }
+    });
+  })();
+
+  // ---- Кольцевая диаграмма категорий ----
+  (function () {
+    const svg = document.getElementById('ch-donut');
+    const data = [
+      { n: 'Семья', v: 98200, c: '--c-family' },
+      { n: 'Жильё', v: 96500, c: '--c-housing' },
+      { n: 'Персонал', v: 78000, c: '--c-staff' },
+      { n: 'Транспорт', v: 21400, c: '--c-transport' },
+      { n: 'Накопления', v: 30000, c: '--c-savings' },
+      { n: 'Прочее', v: 12300, c: '--c-other' },
+    ];
+    const total = data.reduce((s, d) => s + d.v, 0);
+    const R = 58, C = 2 * Math.PI * R;
+    let off = 0;
+    const g = el('g', { transform: 'rotate(-90 85 85)' }, svg);
+    data.forEach(d => {
+      const len = d.v / total * C;
+      el('circle', {
+        cx: 85, cy: 85, r: R, fill: 'none', 'stroke-width': 24,
+        style: `stroke:var(${d.c})`,
+        'stroke-dasharray': `${Math.max(len - 3, 1)} ${C - Math.max(len - 3, 1)}`,
+        'stroke-dashoffset': -off,
+      }, g);
+      off += len;
+    });
+    const t1 = el('text', { x: 85, y: 82, 'text-anchor': 'middle', class: 'donut-center' }, svg); t1.textContent = fmt(336400);
+    const t2 = el('text', { x: 85, y: 100, 'text-anchor': 'middle' }, svg); t2.textContent = '₽ расходов';
+    const leg = document.getElementById('donut-legend');
+    data.forEach(d => {
+      const row = document.createElement('div'); row.className = 'row';
+      const i = document.createElement('i'); i.className = 'dot'; i.style.background = `var(${d.c})`;
+      const name = document.createElement('span'); name.textContent = d.n;
+      const pct = document.createElement('span'); pct.className = 'pct money'; pct.textContent = Math.round(d.v / total * 100) + '%';
+      const b = document.createElement('b'); b.className = 'money'; b.textContent = fmt(d.v) + ' ₽';
+      row.append(i, name, pct, b); leg.appendChild(row);
+    });
+  })();
+
+  // ---- Расходы по дням ----
+  (function () {
+    const svg = document.getElementById('ch-days');
+    const days = [85, 9.4, 4.2, 1.3, 57.5, 3.5, 2.1, 6.8, 1.5, 30, 4.2, 2.8, 18.3, 3.1, 15.2, 5.4, 2.2, 7.6, 1.8, 16.4, 3.3, 2.4, 9.1, 4.8, 6.5, 12.2, 3.7, 5.3, 8.9, 3.2];
+    const base = 138, top = 18, max = 90, x0 = 40, x1 = 890;
+    const step = (x1 - x0) / days.length, W = Math.min(16, step - 4);
+    [0, 30, 60, 90].forEach(v => {
+      const y = base - v / max * (base - top);
+      el('line', { x1: x0, x2: x1, y1: y, y2: y, class: v === 0 ? 'axis-l' : 'grid-l' }, svg);
+      if (v > 0) { const t = el('text', { x: x0 - 6, y: y + 3, 'text-anchor': 'end' }, svg); t.textContent = v; }
+    });
+    days.forEach((v, i) => {
+      const h = Math.max(v / max * (base - top), 2);
+      const x = x0 + i * step + (step - W) / 2;
+      el('path', { d: colPath(x, base - h, W, h, 3), style: 'fill:var(--c-family)', opacity: .92 }, svg);
+      if ((i + 1) % 5 === 0 || i === 0) { const t = el('text', { x: x + W / 2, y: base + 16, 'text-anchor': 'middle' }, svg); t.textContent = i + 1; }
+    });
+    const t = el('text', { x: x0 + (step - W) / 2 + W / 2 + 10, y: 24, class: 'lbl' }, svg); t.textContent = '85 000 ₽ — аренда и взнос в фонд';
+  })();
+
+  // ---- Динамика остатка ----
+  (function () {
+    const svg = document.getElementById('ch-flow');
+    const pts = [[0, 0], [1, 195], [5, 135], [10, 204], [13, 186], [15, 171], [20, 235], [25, 190], [28, 150], [30, 113.6]];
+    const base = 158, top = 22, maxV = 250, x0 = 46, x1 = 404;
+    const X = d => x0 + d / 30 * (x1 - x0), Y = v => base - v / maxV * (base - top);
+    [0, 125, 250].forEach(v => {
+      const y = Y(v);
+      el('line', { x1: x0, x2: x1, y1: y, y2: y, class: v === 0 ? 'axis-l' : 'grid-l' }, svg);
+      if (v > 0) { const t = el('text', { x: x0 - 6, y: y + 3, 'text-anchor': 'end' }, svg); t.textContent = fmt(v); }
+    });
+    [1, 10, 20, 30].forEach(d => { const t = el('text', { x: d === 30 ? X(d) + 8 : X(d), y: base + 16, 'text-anchor': d === 30 ? 'end' : 'middle' }, svg); t.textContent = d + ' сен'; });
+    const line = pts.map((p, i) => (i ? 'L' : 'M') + X(p[0]) + ' ' + Y(p[1])).join(' ');
+    el('path', { d: line + ` L ${X(30)} ${base} L ${X(0)} ${base} Z`, style: 'fill:var(--c-family)', opacity: .1 }, svg);
+    el('path', { d: line, fill: 'none', style: 'stroke:var(--c-family)', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
+    el('circle', { cx: X(30), cy: Y(113.6), r: 6, style: 'fill:var(--c-family); stroke:var(--card)', 'stroke-width': 2 }, svg);
+    const t = el('text', { x: X(30) - 8, y: Y(113.6) - 10, 'text-anchor': 'end', class: 'lbl' }, svg); t.textContent = '+113 600 ₽';
+  })();
+
+  // ---- Сравнение с августом ----
+  (function () {
+    const svg = document.getElementById('ch-cmp');
+    const rows = [
+      { n: 'Семья', a: 111.2, s: 98.2 },
+      { n: 'Жильё', a: 94.6, s: 96.5 },
+      { n: 'Персонал', a: 78, s: 78 },
+      { n: 'Транспорт', a: 24.3, s: 21.4 },
+      { n: 'Прочее', a: 49.9, s: 42.3 },
+    ];
+    const x0 = 96, x1 = 356, max = 120, H = 9, gap = 3;
+    rows.forEach((r, i) => {
+      const y = 22 + i * 33;
+      const t = el('text', { x: x0 - 8, y: y + H + 2, 'text-anchor': 'end', style: 'fill:var(--ink-2)' }, svg); t.textContent = r.n;
+      el('path', { d: barPath(x0, y, Math.max(r.s / max * (x1 - x0), 2), H, 3), style: 'fill:var(--c-family)' }, svg);
+      el('path', { d: barPath(x0, y + H + gap, Math.max(r.a / max * (x1 - x0), 2), H, 3), style: 'fill:var(--axis)' }, svg);
+      const v = el('text', { x: x0 + r.s / max * (x1 - x0) + 6, y: y + H - 1, class: 'lbl' }, svg); v.textContent = fmt(Math.round(r.s * 1000) / 1000);
+    });
+    el('line', { x1: x0, x2: x0, y1: 14, y2: 182, class: 'axis-l' }, svg);
+  })();
+
+  // ---- Топ-5 ----
+  (function () {
+    const wrap = document.getElementById('top5');
+    const rows = [
+      { n: 'Аренда квартиры', d: '1 сентября · Жильё', v: 65000, c: '--c-housing' },
+      { n: 'Зарплата — Анна, няня', d: '5 сентября · Персонал', v: 45000, c: '--c-staff' },
+      { n: 'Взнос «Резервный фонд»', d: '1 сентября · Накопления', v: 20000, c: '--c-savings' },
+      { n: 'Оплата школы', d: '13 сентября · Семья', v: 14800, c: '--c-family' },
+      { n: 'Закупка продуктов', d: '20 сентября · Семья', v: 12600, c: '--c-family' },
+    ];
+    const max = rows[0].v;
+    rows.forEach(r => {
+      const row = document.createElement('div'); row.className = 'row';
+      const left = document.createElement('div');
+      const b = document.createElement('b'); b.textContent = r.n;
+      const d = document.createElement('div'); d.className = 'muted small'; d.textContent = r.d;
+      left.append(b, d);
+      const amt = document.createElement('span'); amt.className = 'money'; amt.style.fontWeight = '600'; amt.textContent = fmt(r.v) + ' ₽';
+      const bar = document.createElement('div'); bar.className = 'bar';
+      const fill = document.createElement('i'); fill.style.width = (r.v / max * 100) + '%'; fill.style.background = `var(${r.c})`;
+      bar.appendChild(fill);
+      row.append(left, amt, bar); wrap.appendChild(row);
+    });
+  })();
+
+  // ---- Календарь сентября 2026 (1 сентября — вторник) ----
+  (function () {
+    const grid = document.getElementById('cal-grid');
+    ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(d => {
+      const c = document.createElement('div'); c.className = 'dow'; c.textContent = d; grid.appendChild(c);
+    });
+    const events = {
+      1: [['g', 'Аренда · 65 000']],
+      3: [['g', 'Кинотеатр · 599']],
+      5: [['y', 'ЖКУ · 12 500'], ['y', 'Анна · 45 000']],
+      10: [['n', 'Сергей · 21 000']],
+      15: [['n', 'Автокредит · 15 200']],
+      20: [['n', 'Интернет · 900']],
+      25: [['n', 'Музыка · 299']],
+    };
+    const cell = (num, off, today) => {
+      const c = document.createElement('div'); c.className = 'day' + (off ? ' off' : '') + (today ? ' today' : '');
+      const n = document.createElement('div'); n.className = 'num'; n.textContent = num; c.appendChild(n);
+      return c;
+    };
+    // 31 августа — понедельник перед началом месяца
+    grid.appendChild(cell(31, true, false));
+    for (let d = 1; d <= 30; d++) {
+      const c = cell(d, false, d === 1);
+      (events[d] || []).forEach(([cls, txt]) => {
+        const e = document.createElement('div'); e.className = 'ev';
+        const dot = document.createElement('span'); dot.className = 'dot ' + cls;
+        const s = document.createElement('span'); s.className = 'money'; s.textContent = txt;
+        e.append(dot, s); c.appendChild(e);
+      });
+      grid.appendChild(c);
+    }
+    for (let d = 1; d <= 4; d++) grid.appendChild(cell(d, true, false)); // начало октября
+  })();
+</script>
